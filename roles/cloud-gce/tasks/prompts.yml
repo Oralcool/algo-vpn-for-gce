@@ -37,10 +37,7 @@
 
     - name: Set facts about the regions
       set_fact:
-        gce_regions: >-
-          [{%- for region in gcp_compute_regions_info.resources | sort(attribute='name') -%}
-              '{{ region.name }}'{% if not loop.last %},{% endif %}
-          {%- endfor -%}]
+        gce_regions: "{{ gcp_compute_regions_info.resources | sort(attribute='name') | map(attribute='name') | list }}"
 
     - name: Set facts about the default region
       set_fact:
@@ -66,7 +63,8 @@
   set_fact:
     algo_region: >-
       {% if region is defined %}{{ region -}}
-      {% elif _gce_region.user_input %}{{ gce_regions[_gce_region.user_input | int - 1] -}}
+      {% elif _gce_region.user_input and _gce_region.user_input | int > 0 %}{{ gce_regions[_gce_region.user_input | int - 1] -}}
+      {% elif _gce_region.user_input %}{{ _gce_region.user_input -}}
       {% else %}{{ gce_regions[default_region | int - 1] }}{% endif %}
 
 - name: Get zones
@@ -80,6 +78,6 @@
       - status=UP
   register: gcp_compute_zone_info
 
-- name: Set random available zone as a fact
+- name: Set zone as a fact
   set_fact:
-    algo_zone: "{{ (gcp_compute_zone_info.resources | random(seed=algo_server_name + algo_region + project_id)).name }}"
+    algo_zone: "{{ algo_region }}-b"
